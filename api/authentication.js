@@ -9,7 +9,7 @@ const ALLOWED_FIELDS = [
   'model_id',
   'product_sku',
   'product_sku_id',
-  'service_level_id',
+  'turnaround_time_id',,
   'service_extra_service_ids',
   'images',
   'product_source_type',
