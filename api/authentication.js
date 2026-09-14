@@ -4,6 +4,7 @@ const { handlePreflight, legitApp, sendError } = require('./_lib');
 // See: https://docs.legitapp.com/api-integration/server-api-v1
 const ALLOWED_FIELDS = [
   'category_id',
+  'authentication_set_id',
   'brand_id',
   'model_id',
   'product_sku',
