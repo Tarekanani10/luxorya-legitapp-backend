@@ -1,15 +1,16 @@
 const { handlePreflight, legitApp, sendError } = require('./_lib');
+const { sendConfirmationEmail } = require('./_email');
 
 // Fields we accept from the storefront form and forward as-is to LegitApp.
 // See: https://docs.legitapp.com/api-integration/server-api-v1
 const ALLOWED_FIELDS = [
-  'category_id',
   'authentication_set_id',
+  'category_id',
   'brand_id',
   'model_id',
   'product_sku',
   'product_sku_id',
-  'turnaround_time_id',,
+  'turnaround_time_id',
   'service_extra_service_ids',
   'images',
   'product_source_type',
@@ -34,6 +35,15 @@ module.exports = async (req, res) => {
     }
 
     const response = await legitApp.post('/authentication', payload);
+
+    // customer_name / customer_email are only used here, for the
+    // confirmation email — they're never forwarded to LegitApp.
+    await sendConfirmationEmail({
+      to: req.body.customer_email,
+      name: req.body.customer_name,
+      referenceId: response.data.authentication_id,
+    });
+
     res.status(200).json(response.data);
   } catch (error) {
     sendError(res, error);
