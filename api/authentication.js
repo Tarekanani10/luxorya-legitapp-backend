@@ -22,6 +22,21 @@ const ALLOWED_FIELDS = [
   'certificate_owner_name',
 ];
 
+// The storefront form doesn't send separate customer_name / customer_email
+// fields — it packs both into user_custom_code as "Name <email@domain.com>".
+// This pulls them back apart so we can use them for the confirmation email,
+// while user_custom_code itself still goes to LegitApp unchanged.
+function extractContactFromCustomCode(userCustomCode) {
+  if (!userCustomCode) return { name: undefined, email: undefined };
+
+  const match = userCustomCode.match(/^(.*?)\s*<([^<>]+)>\s*$/);
+  if (!match) return { name: undefined, email: undefined };
+
+  const name = match[1].trim() || undefined;
+  const email = match[2].trim() || undefined;
+  return { name, email };
+}
+
 module.exports = async (req, res) => {
   if (handlePreflight(req, res)) return;
   if (req.method !== 'POST') {
@@ -36,11 +51,18 @@ module.exports = async (req, res) => {
 
     const response = await legitApp.post('/authentication', payload);
 
-    // customer_name / customer_email are only used here, for the
-    // confirmation email — they're never forwarded to LegitApp.
+    // customer_name / customer_email aren't sent separately by the form —
+    // they're embedded in user_custom_code ("Name <email>"). We only use
+    // them here for the confirmation email; they're never forwarded to
+    // LegitApp on their own (user_custom_code itself already was, above,
+    // as part of payload).
+    // Falls back to req.body.customer_name / customer_email if the form
+    // is ever updated later to send those directly.
+    const extracted = extractContactFromCustomCode(req.body.user_custom_code);
+
     await sendConfirmationEmail({
-      to: req.body.customer_email,
-      name: req.body.customer_name,
+      to: req.body.customer_email || extracted.email,
+      name: req.body.customer_name || extracted.name,
       referenceId: response.data.authentication_id,
     });
 
